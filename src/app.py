@@ -318,6 +318,7 @@ class Application(Application_ui):
         try:
             #TODO, Please finish the function here!
             urls=[]
+            imgs=[]
             base_url = "https://loudspeakerdatabase.com"
             for i in range(0,5000,40):
             # for i in range(0,55,40):
@@ -332,21 +333,26 @@ class Application(Application_ui):
                     # Parse the HTML content with BeautifulSoup
                     soup = BeautifulSoup(response.text, 'html.parser')
                     # Find all <a> tags
-                    a_tags = soup.find_all('a')            
+                    a_tags = soup.find_all('a')   
+                    img_tags = soup.find_all('img')          
                     # Extract the href attribute from each <a> tag and complete the URL
                     full_urls = [base_url + a.get('href') for a in a_tags if a.get('href')]
-               
+                    full_imgurls = [base_url + img.get('src') for img in img_tags if img.get('src')]
                     urls.extend(full_urls)
+                    imgs.extend(full_imgurls)
                 else:
                     print(f"请求失败，状态码：{response.status_code}")
                     time.sleep(2)
                 
             urlFile = os.path.join(os.getcwd(), 'database',"url.txt")
+            imgFile = os.path.join(os.getcwd(), 'database',"img.txt")
             with open(urlFile, 'w', encoding='utf-8') as file:
                 file.write(str(urls))   
-            
+            with open(imgFile, 'w', encoding='utf-8') as file2:
+                file2.write(str(imgs)) 
             self.datas['readedCount']=0
             self.datas['listedCount']=0
+            
             for speakurl in urls:
                 self.datas['listedCount']+=1
                 # self.loginfo(speakurl)
@@ -375,7 +381,9 @@ class Application(Application_ui):
                     time.sleep(1)
                 self.readUrlData_thread=threading.Thread(target=self.readUrlData,args=(speakurl,base_path))
                 self.readUrlData_thread.start()
-                    
+                
+           
+                        
         except Exception as e:
             print("err:")
             print(e)
@@ -417,10 +425,41 @@ class Application(Application_ui):
             with open(data_file_path, 'w', encoding='utf-8') as file:
                 file.write(response.text)   
             print(f"文件 {data_file_path} 已创建。")
+            self.downloadImgData(response.text,path)
         else:
             print(f"请求失败，状态码：{response.status_code}")
             time.sleep(2)
         self.datas['readedCount']+=1
+    
+    
+    def downloadImgData(self,html,path):
+        
+        # 使用 BeautifulSoup 解析 HTML
+        soup = BeautifulSoup(html, 'html.parser')
+        # 寻找所有的图片链接
+        img_tags = soup.find_all('img')
+        
+        # 对于找到的每一个 img 标签
+        for img in img_tags:
+            # 获取图片的 URL
+            img_url = img.get('src')
+            # 如果 img_url 有效
+            if img_url:
+                # 获取图片文件名
+                filename = os.path.basename(img_url)
+                # 完整的文件路径
+                file_path = os.path.join(path, filename)
+                # 尝试下载并保存图片
+                try:
+                    # 获取图片数据
+                    img_data = requests.get(img_url).content
+                    # 保存图片
+                    with open(file_path, 'wb') as file:
+                        file.write(img_data)
+                    print(f"图片 {filename} 已被保存到 {file_path}")
+                except Exception as e:
+                    print(f"下载图片 {filename} 失败: {e}")        
+                    time.sleep(2)
     
     def decodeData(self):
         # 初始化一个空数组来存储符合条件的文件路径

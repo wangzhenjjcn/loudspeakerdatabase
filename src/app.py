@@ -400,11 +400,16 @@ class Application(Application_ui):
         
         data_file_path = os.path.join(path, 'data.txt')
         if  os.path.exists(data_file_path):
-            # self.loginfo(data_file_path+" exists ignore")
-            self.datas['readedCount']+=1
-            return
+            self.loginfo(data_file_path+" exists ignore")
+            # self.datas['readedCount']+=1
+            # self.loginfo(self.datas['readedCount'])
+            # return
         response = requests.get(url, headers=headers)
         # 确保请求成功
+        if "" in response.text:
+            self.datas['readedCount']+=1
+            self.loginfo(self.datas['readedCount'])
+            return
         if response.status_code == 200:
             with open(data_file_path, 'w', encoding='utf-8') as file:
                 file.write(response.text)   

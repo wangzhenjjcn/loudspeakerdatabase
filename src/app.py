@@ -325,27 +325,32 @@ class Application(Application_ui):
             base_url = "https://loudspeakerdatabase.com"
             for i in range(0,5000,40):
             # for i in range(0,55,40):
-                if len(urls)>=3886:
-                    continue
-                pageUrl='https://loudspeakerdatabase.com/next_page_api/offset='+str(i)
-                self.loginfo(str(len(urls))+"/"+str(i)+" - "+pageUrl)
-                # 发送GET请求
-                response = requests.get(pageUrl)
-                # 确保请求成功
-                if response.status_code == 200:
-                    # Parse the HTML content with BeautifulSoup
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    # Find all <a> tags
-                    a_tags = soup.find_all('a')   
-                    img_tags = soup.find_all('img')          
-                    # Extract the href attribute from each <a> tag and complete the URL
-                    full_urls = [base_url + a.get('href') for a in a_tags if a.get('href')]
-                    full_imgurls = [base_url + img.get('src') for img in img_tags if img.get('src')]
-                    urls.extend(full_urls)
-                    imgs.extend(full_imgurls)
-                else:
-                    print(f"请求失败，状态码：{response.status_code}")
-                    time.sleep(2)
+                try:
+                    pageUrl='https://loudspeakerdatabase.com/next_page_api/offset='+str(i)
+                    self.loginfo(str(len(urls))+"/"+str(i)+" - "+pageUrl)
+                    # 发送GET请求
+                    response = requests.get(pageUrl)
+                    # 确保请求成功
+                    if response.status_code == 200:
+                        # Parse the HTML content with BeautifulSoup
+                        soup = BeautifulSoup(response.text, 'html.parser')
+                        # Find all <a> tags
+                        a_tags = soup.find_all('a')   
+                        img_tags = soup.find_all('img')          
+                        # Extract the href attribute from each <a> tag and complete the URL
+                        full_urls = [base_url + a.get('href') for a in a_tags if a.get('href')]
+                        full_imgurls = [base_url + img.get('src') for img in img_tags if img.get('src')]
+                        urls.extend(full_urls)
+                        imgs.extend(full_imgurls)
+                        if len(full_urls)<1:
+                            break
+                    else:
+                        print(f"请求失败，状态码：{response.status_code}")
+                        time.sleep(2)
+                        break
+                except Exception as e:
+                    print(e)
+                    break
                 
             urlFile = os.path.join(os.getcwd(), 'database',"url.txt")
             imgFile = os.path.join(os.getcwd(), 'database',"img.txt")
@@ -375,22 +380,17 @@ class Application(Application_ui):
                 for part in path_parts:
                     base_path = os.path.join(base_path, part)  # 更新当前的基路径
                     if not os.path.exists(base_path):  # 检查这个路径是否存在
-                        os.makedirs(base_path)  # 创建文件夹
-                        
-                        
+                        os.makedirs(base_path)  # 创建文件夹                        
                 # self.loginfo("open:"+speakurl)
-                
                 if (self.datas['listedCount']-self.datas['readedCount']>10):
                     time.sleep(1)
                 self.readUrlData_thread=threading.Thread(target=self.readUrlData,args=(speakurl,base_path))
-                self.readUrlData_thread.start()
-                
-           
-                        
+                self.readUrlData_thread.start()      
         except Exception as e:
             print("err:")
             print(e)
         self.btnStates=[0,1,1,1,1,1]##打开浏览器、隐藏浏览器、检查、读取、当前读取、保存
+        self.loginfo("Task End Submit!")
         # # 执行 JavaScript，滚动到页面底部
         # self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         # # 使用 PAGE_DOWN 键向下滚动
@@ -414,10 +414,10 @@ class Application(Application_ui):
         
         data_file_path = os.path.join(path, 'data.txt')
         if  os.path.exists(data_file_path):
-            self.loginfo(data_file_path+" exists ignore")
-            # self.datas['readedCount']+=1
+            # self.loginfo(data_file_path+" exists ignore")
+            self.datas['readedCount']+=1
             # self.loginfo(self.datas['readedCount'])
-            # return
+            return
         response = requests.get(url, headers=headers)
         # 确保请求成功
         if "basudgan8 SAMPLE TEXT sd78n" in response.text:
@@ -427,10 +427,10 @@ class Application(Application_ui):
         if response.status_code == 200:
             with open(data_file_path, 'w', encoding='utf-8') as file:
                 file.write(response.text)   
-            print(f"文件 {data_file_path} 已创建。")
+            # print(f"文件 {data_file_path} 已创建。")
             self.downloadImgData(response.text,path)
         else:
-            print(f"请求失败，状态码：{response.status_code}")
+            # print(f"请求失败，状态码：{response.status_code}")
             time.sleep(2)
         self.datas['readedCount']+=1
     
@@ -454,7 +454,7 @@ class Application(Application_ui):
                 # 完整的文件路径
                 file_path = os.path.join(path, filename)
                 if  os.path.exists(file_path):
-                    self.loginfo(file_path+" exists ignore")
+                    # self.loginfo(file_path+" exists ignore")
                     return
                 if not basename in filename:
                     return
@@ -462,17 +462,18 @@ class Application(Application_ui):
                 try:
                     # 获取图片数据
                     img_data=None
-                    
                     if not base_url in img_url:
                         img_data = requests.get(base_url+img_url).content
                     else:
                         img_data = requests.get(img_url).content
+                    if img_data==None:
+                        return
                     # 保存图片
                     with open(file_path, 'wb') as file:
                         file.write(img_data)
-                    print(f"图片 {filename} 已被保存到 {file_path}")
+                    # print(f"图片 {filename} 已被保存到 {file_path}")
                 except Exception as e:
-                    print(f"下载图片 {filename} 失败: {e}")        
+                    # print(f"下载图片 {filename} 失败: {e}")        
                     time.sleep(2)
     
     def decodeData(self):

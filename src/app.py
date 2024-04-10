@@ -369,7 +369,7 @@ class Application(Application_ui):
                         
                 self.loginfo("open:"+speakurl)
                 
-                if (self.datas['listedCount']-self.datas['readedCount']>5):
+                if (self.datas['listedCount']-self.datas['readedCount']>10):
                     time.sleep(5)
                 self.readUrlData_thread=threading.Thread(target=self.readUrlData,args=(speakurl,base_path))
                 self.readUrlData_thread.start()

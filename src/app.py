@@ -316,6 +316,9 @@ class Application(Application_ui):
     def readData(self):
         self.btnStates=[0,0,0,0,0,0]##打开浏览器、隐藏浏览器、检查、读取、当前读取、保存
         try:
+            base_path = os.path.join(os.getcwd(), 'database')
+            if not os.path.exists(base_path):
+                os.makedirs(base_path)
             #TODO, Please finish the function here!
             urls=[]
             imgs=[]
@@ -433,7 +436,7 @@ class Application(Application_ui):
     
     
     def downloadImgData(self,html,path):
-        
+        base_url = "https://loudspeakerdatabase.com"
         # 使用 BeautifulSoup 解析 HTML
         soup = BeautifulSoup(html, 'html.parser')
         # 寻找所有的图片链接
@@ -447,12 +450,23 @@ class Application(Application_ui):
             if img_url:
                 # 获取图片文件名
                 filename = os.path.basename(img_url)
+                basename=os.path.basename(path)
                 # 完整的文件路径
                 file_path = os.path.join(path, filename)
+                if  os.path.exists(file_path):
+                    self.loginfo(file_path+" exists ignore")
+                    return
+                if not basename in filename:
+                    return
                 # 尝试下载并保存图片
                 try:
                     # 获取图片数据
-                    img_data = requests.get(img_url).content
+                    img_data=None
+                    
+                    if not base_url in img_url:
+                        img_data = requests.get(base_url+img_url).content
+                    else:
+                        img_data = requests.get(img_url).content
                     # 保存图片
                     with open(file_path, 'wb') as file:
                         file.write(img_data)

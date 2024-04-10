@@ -318,11 +318,11 @@ class Application(Application_ui):
             urls=[]
             base_url = "https://loudspeakerdatabase.com"
             for i in range(0,5000,40):
+            # for i in range(0,55,40):
                 if len(urls)>=3886:
                     continue
-            # for i in range(0,55,40):
                 pageUrl='https://loudspeakerdatabase.com/next_page_api/offset='+str(i)
-                self.loginfo(str(i)+" - "+pageUrl)
+                self.loginfo(str(len(urls))+"/"+str(i)+" - "+pageUrl)
                 # 发送GET请求
                 response = requests.get(pageUrl)
                 # 确保请求成功
@@ -347,7 +347,7 @@ class Application(Application_ui):
             self.datas['listedCount']=0
             for speakurl in urls:
                 self.datas['listedCount']+=1
-                self.loginfo(speakurl)
+                # self.loginfo(speakurl)
                 if "next_page_api" in speakurl or "offset" in speakurl:
                     self.loginfo("ignore:"+ speakurl)
                     continue
@@ -367,10 +367,10 @@ class Application(Application_ui):
                         os.makedirs(base_path)  # 创建文件夹
                         
                         
-                self.loginfo("open:"+speakurl)
+                # self.loginfo("open:"+speakurl)
                 
                 if (self.datas['listedCount']-self.datas['readedCount']>10):
-                    time.sleep(5)
+                    time.sleep(1)
                 self.readUrlData_thread=threading.Thread(target=self.readUrlData,args=(speakurl,base_path))
                 self.readUrlData_thread.start()
                     
@@ -400,7 +400,7 @@ class Application(Application_ui):
         
         data_file_path = os.path.join(path, 'data.txt')
         if  os.path.exists(data_file_path):
-            self.loginfo(data_file_path+" exists ignore")
+            # self.loginfo(data_file_path+" exists ignore")
             self.datas['readedCount']+=1
             return
         response = requests.get(url, headers=headers)

@@ -389,12 +389,21 @@ class Application(Application_ui):
 
 
     def readUrlData(self,url,path):
+        # 定义请求头部
+        headers = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7,ja;q=0.6',
+            'Cookie': '_ga=GA1.1.860630619.1712469598; _ym_uid=1712469598459879214; _ym_d=1712469598; _ym_isad=1; _ym_visorc=w; _clck=1aibkm1|2|fkt|0|1558; _clsk=1e8r1f9|1712719918134|1|1|i.clarity.ms/collect; _lsdb_v2_nouser_session=bHVja3k=--OITgVblbmDQoISeWu0gmrj/eUsGI6juNheOfn4aDdB4BuV9Gg9xxXFihAF+PyLshZss2Qwtvr4dxMadATDpyBBUT35mkSVfwcaUgvA49RTUcxpr89Sf+eYrkurQz3PyR; _ga_0Z8NXL8KJP=GS1.1.1712719909.4.1.1712719968.0.0.0',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+        }
+        
         data_file_path = os.path.join(path, 'data.txt')
         if  os.path.exists(data_file_path):
             self.loginfo(data_file_path+" exists ignore")
             self.datas['readedCount']+=1
             return
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         # 确保请求成功
         if response.status_code == 200:
             with open(data_file_path, 'w', encoding='utf-8') as file:
@@ -405,31 +414,6 @@ class Application(Application_ui):
             time.sleep(2)
         self.datas['readedCount']+=1
         
-
-    def countData(self):
-        # # ID
-        # element_by_id = driver.find_element(By.ID, "特定的ID")
-        # element_by_id.click()
-        try:
-            woofer_cards = self.driver.find_elements_by_css_selector('div.results .woofer_card')
-            woofer_cards_count = len(woofer_cards)
-            print(f"找到的'woofer_card'元素数量为: {woofer_cards_count}")
-            
-            # 定位到类名为 'results_count' 的span元素
-            results_count_element = driver.find_element(By.CLASS_NAME, 'results_count')
-            # 获取该元素的文本值
-            results_count_text = results_count_element.text
-            # 使用正则表达式从文本中提取数字
-            numbers_in_text = re.findall('\d+', results_count_text)
-            if numbers_in_text:
-                # 假设我们只关心第一个匹配的数字
-                print(f"从文本中提取的数字是: {numbers_in_text[0]}")
-            else:
-                print("文本中没有找到数字。")
-        except:
-            
-            pass
-    
 
 
 

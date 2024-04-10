@@ -71,7 +71,7 @@ class Application_ui(Frame):
         self.CommandHeadlessChrome.place(relx=0.136, rely=0.123, relwidth=0.729, relheight=0.063)
 
         self.style.configure('CommandReadFromCurrent.TButton',font=('宋体',9))
-        self.CommandReadFromCurrent = Button(self.FrameChromeOptions, text='从当前页读取', command=self.CommandReadFromCurrent_Cmd, style='CommandReadFromCurrent.TButton')
+        self.CommandReadFromCurrent = Button(self.FrameChromeOptions, text='解析数据', command=self.CommandReadFromCurrent_Cmd, style='CommandReadFromCurrent.TButton')
         self.CommandReadFromCurrent.place(relx=0.136, rely=0.382, relwidth=0.729, relheight=0.063)
 
         self.style.configure('CommandReadData.TButton',font=('宋体',9))
@@ -98,7 +98,7 @@ class Application(Application_ui):
         self.showChrome=True
         self.driverInited=False
         self.configInited=False
-        self.btnStates=[1,0,0,1,0,0]##打开浏览器、隐藏浏览器、检查、读取、当前读取、保存
+        self.btnStates=[1,0,0,1,1,0]##打开浏览器、隐藏浏览器、检查、读取、当前读取、保存
         self.initDriver_thread=threading.Thread(target=self.initDriver)
         setBtnStatus_thread=threading.Thread(target=self.setAllBtnStatus)
         setBtnStatus_thread.start()
@@ -268,7 +268,9 @@ class Application(Application_ui):
 
     def CommandReadFromCurrent_Cmd(self, event=None):
         #TODO, Please finish the function here!
- 
+        self.btnStates=[1,1,1,0,0,0]##打开浏览器、隐藏浏览器、检查、读取、当前读取、保存
+        self.decodeData_thread=threading.Thread(target=self.decodeData)
+        self.decodeData_thread.start()
         pass
 
     def CommandReadData_Cmd(self, event=None):
@@ -388,6 +390,7 @@ class Application(Application_ui):
         pass
 
 
+
     def readUrlData(self,url,path):
         # 定义请求头部
         headers = {
@@ -406,7 +409,7 @@ class Application(Application_ui):
             # return
         response = requests.get(url, headers=headers)
         # 确保请求成功
-        if "" in response.text:
+        if "basudgan8 SAMPLE TEXT sd78n" in response.text:
             self.datas['readedCount']+=1
             self.loginfo(self.datas['readedCount'])
             return
@@ -418,7 +421,25 @@ class Application(Application_ui):
             print(f"请求失败，状态码：{response.status_code}")
             time.sleep(2)
         self.datas['readedCount']+=1
-        
+    
+    def decodeData(self):
+        # 初始化一个空数组来存储符合条件的文件路径
+        files = []
+        base_path = os.path.join(os.getcwd(), 'database')
+        # 使用os.walk()遍历start_dir下的所有文件夹及其子文件夹
+        for dirpath, dirnames, filenames in os.walk(base_path):
+            # 检查当前遍历的文件夹内是否存在文件名为'data.txt'的文件
+            if 'data.txt' in filenames:
+                # 构建完整的文件路径并添加到files数组中
+                files.append(os.path.join(dirpath, 'data.txt'))
+        for datafile in files:
+            print(datafile)
+            
+            
+            
+            
+        self.btnStates=[1,1,1,0,1,1]##打开浏览器、隐藏浏览器、检查、读取、当前读取、保存
+        pass        
 
 
 

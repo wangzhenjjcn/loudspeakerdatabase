@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 #-*- coding:utf-8 -*-
 
-import os, sys,time,time,json,validators,configparser,re,requests
-import requests,threading,pyperclip
-
-from io import BytesIO
-import subprocess
+import os, sys,time,time,json,configparser,requests,threading
+# import pyperclip,re,validators
+import pandas as pd
+# from io import BytesIO
+# import subprocess
 from selenium import webdriver 
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
+# from selenium.webdriver.common.keys import Keys
+# from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+ 
 try:
     from tkinter import *
 except ImportError:  #Python 2.x
@@ -102,6 +102,8 @@ class Application(Application_ui):
         self.initDriver_thread=threading.Thread(target=self.initDriver)
         setBtnStatus_thread=threading.Thread(target=self.setAllBtnStatus)
         setBtnStatus_thread.start()
+        if not self.configInited:
+            self.initConfig()
         self.loginfo("Init success,System Ready!")
         
     def setIconStatus(self):
@@ -154,7 +156,8 @@ class Application(Application_ui):
                 'useProxy': 'False',
                 'socks5Proxy': 'socks5://127.0.0.1:12345',
                 'httpProxy': 'http://127.0.0.1:12346',
-                'proxyType' : 'socks5'
+                'proxyType' : 'socks5',
+                'maxPage' :'5000'
             }
             # Write the new configuration to file
             with open(config_file_path, 'w') as configfile:
@@ -323,8 +326,10 @@ class Application(Application_ui):
             urls=[]
             imgs=[]
             base_url = "https://loudspeakerdatabase.com"
-            for i in range(0,5000,40):
-            # for i in range(0,55,40):
+            maxnum=int(self.config['DEFAULT']['maxPage'])
+            if maxnum==None or maxnum<1:
+                maxnum=5000
+            for i in range(0,maxnum,40):
                 try:
                     pageUrl='https://loudspeakerdatabase.com/next_page_api/offset='+str(i)
                     self.loginfo(str(len(urls))+"/"+str(i)+" - "+pageUrl)
@@ -413,6 +418,7 @@ class Application(Application_ui):
         }
         
         data_file_path = os.path.join(path, 'data.txt')
+        decodedata_file_path = os.path.join(path, 'data.json')
         if  os.path.exists(data_file_path):
             # self.loginfo(data_file_path+" exists ignore")
             self.datas['readedCount']+=1
@@ -425,16 +431,66 @@ class Application(Application_ui):
             self.loginfo(self.datas['readedCount'])
             return
         if response.status_code == 200:
+            loudspeaker=self.decodeDataByHtml(response.text) 
             with open(data_file_path, 'w', encoding='utf-8') as file:
                 file.write(response.text)   
+            with open(decodedata_file_path, 'w', encoding='utf-8') as file:
+                file.write(str(loudspeaker))   
             # print(f"文件 {data_file_path} 已创建。")
+            self.downloadPdfData(response.text,path)
             self.downloadImgData(response.text,path)
+            # print(loudspeaker)
         else:
             # print(f"请求失败，状态码：{response.status_code}")
             time.sleep(2)
         self.datas['readedCount']+=1
     
+    def downloadPdfData(self,html,path):
+        # 使用BeautifulSoup解析HTML
+        soup = BeautifulSoup(html, 'html.parser')
+
+        # 找到class为'datasheet'的div
+        datasheet_div = soup.find('div', class_='datasheet')
+
+        # 初始化基础URL
+        base_url = 'https://loudspeakerdatabase.com'
+
+        # 检查是否找到了目标div
+        if datasheet_div:
+            # 在datasheet div中找到第一个a标签
+            first_a_tag = datasheet_div.find('a')
+            
+            if first_a_tag:
+                # 获取a标签的href属性值
+                href_value = first_a_tag.get('href', '')
+                # 补齐链接地址
+                full_url = base_url + href_value
+                # 打印完整的链接地址
+                # print(f"Full URL: {full_url}")
+                filename = os.path.basename(href_value)
+                file_path = os.path.join(path, filename)
+                if  os.path.exists(file_path):
+                    # self.loginfo(file_path+" exists ignore")
+                    return
+                try:
+                    # 获取pdf数据
+                    pdf_data=None
+                    if not base_url in href_value:
+                        pdf_data = requests.get(full_url).content
+                    else:
+                        pdf_data = requests.get(href_value).content
+                    if pdf_data==None:
+                        return
+                    # 保存pdf
+                    with open(file_path, 'wb') as file:
+                        file.write(pdf_data)
+                    # print(f"pdf {filename} 已被保存到 {file_path}")
+                except Exception as e:
+                    # print(f"下载pdf {filename} 失败: {e}")        
+                    time.sleep(2)
+                
     
+        
     def downloadImgData(self,html,path):
         base_url = "https://loudspeakerdatabase.com"
         # 使用 BeautifulSoup 解析 HTML
@@ -479,6 +535,7 @@ class Application(Application_ui):
     def decodeData(self):
         # 初始化一个空数组来存储符合条件的文件路径
         files = []
+        datas=[]
         base_path = os.path.join(os.getcwd(), 'database')
         # 使用os.walk()遍历start_dir下的所有文件夹及其子文件夹
         for dirpath, dirnames, filenames in os.walk(base_path):
@@ -486,14 +543,121 @@ class Application(Application_ui):
             if 'data.txt' in filenames:
                 # 构建完整的文件路径并添加到files数组中
                 files.append(os.path.join(dirpath, 'data.txt'))
+        self.loginfo("All data:"+str(len(files)))
         for datafile in files:
-            print(datafile)
-            
-            
-            
-            
+            # print(datafile)
+            try:
+                with open(datafile, 'r', encoding='utf-8') as file:
+                    html = file.read()
+                    loudspeaker=self.decodeDataByHtml(html) 
+                    datas.append(loudspeaker)
+                    # print(loudspeaker)
+            except Exception as e:
+                print(e)
+           
+        # print(datas)
+     
+        # 处理所有数据，将它们转换为平铺的字典格式
+        flattened_data_list = [flatten(item) for item in datas]
+        # 创建DataFrame
+        df = pd.DataFrame(flattened_data_list)
+        df.to_excel(base_path+"/speaker_data.xlsx", index=False)  
         self.btnStates=[1,1,1,0,1,1]##打开浏览器、隐藏浏览器、检查、读取、当前读取、保存
         pass        
+
+   
+
+
+    def decodeDataByHtml(self,html):
+        # print(html)
+        loudspeaker={}
+        soup = BeautifulSoup(html, 'html.parser')
+        # Find the div with class 'title'
+        title_div = soup.find('div', class_='title')
+        # Check if the div is found
+        if title_div:
+            # Find the span with class 'brand' within the div
+            brand_span = title_div.find('span', class_='brand')
+            if brand_span:
+                # print(f"Brand: {brand_span.text}")
+                loudspeaker['brand']=brand_span.text
+            # Find the span with class 'ref' within the div
+            ref_span = title_div.find('span', class_='ref')
+            if ref_span:
+                # print(f"Ref: {ref_span.text}")
+                loudspeaker['ref']=ref_span.text
+            
+       
+        
+        
+        # Find the div with the class 'essentials'
+        essentials_div = soup.find('div', class_='essentials')
+    
+        # Check if the essentials div is found
+        if essentials_div:
+            # 在'essentials' div中找到所有的div元素
+            all_divs = essentials_div.find_all('div')
+
+            for div in all_divs:
+                # 获取每个div的class属性值，class是一个列表，所以我们使用' '.join将其转换为字符串
+                class_value = ' '.join(div.get('class', []))  # 如果没有class属性，返回空列表
+
+                # 获取每个div的data-highlight属性值
+                data_highlight_value = div.get('data-highlight', '')  # 如果没有data-highlight属性，则返回空字符串
+                
+                # 获取div的文本内容
+                text_value = div.text.strip()  # .strip()移除字符串开头和结尾的空白符
+
+                # 打印结果
+                # print(f"Class: {class_value}, Data-Highlight: {data_highlight_value}, Text: {text_value}")
+
+                if data_highlight_value not in loudspeaker.keys():
+                    loudspeaker[data_highlight_value]={}
+                loudspeaker[data_highlight_value][class_value]=text_value
+        # 找到class为'params'的div
+        params_div = soup.find('div', class_='params')
+
+        # 如果找到了params div，进行处理
+        if params_div:
+            # 在params div中找到所有的div元素
+            all_divs = params_div.find_all('div')
+            
+            for div in all_divs:
+                # 获取div的class属性值，因为一个标签可以有多个class，这里我们取全部
+                paramsclass_values = ' '.join(div.get('class', []))
+                
+                # 获取div的data-highlight属性值
+                paramsdata_highlight = div.get('data-highlight', 'None')
+                
+                # 获取div的文本内容
+                paramstext_data = div.text.strip()
+                
+                # 打印结果
+                # print(f"Class: {class_values}, Data-Highlight: {data_highlight}, Text: {text_data}")
+                if   paramsdata_highlight not in loudspeaker.keys():
+                    loudspeaker[paramsdata_highlight]={}
+                loudspeaker[paramsdata_highlight][paramsclass_values]=paramstext_data
+        # print(loudspeaker)
+        return loudspeaker
+
+
+
+
+
+ # 将JSON数据转换为DataFrame需要的格式
+# 这个函数会递归地处理嵌套字典，并将它们平铺开
+def flatten(data, prefix=''):
+    items = []
+    for k, v in data.items():
+        new_key = prefix + k if prefix else k
+        if isinstance(v, dict):
+            items.extend(flatten(v, new_key + '_').items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+
 
 
 

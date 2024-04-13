@@ -329,7 +329,8 @@ class Application(Application_ui):
             maxnum=int(self.config['DEFAULT']['maxPage'])
             if maxnum==None or maxnum<1:
                 maxnum=5000
-            for i in range(0,maxnum,40):
+            for i in range(0,maxnum,80):
+               
                 try:
                     pageUrl='https://loudspeakerdatabase.com/next_page_api/offset='+str(i)
                     self.loginfo(str(len(urls))+"/"+str(i)+" - "+pageUrl)
@@ -338,7 +339,8 @@ class Application(Application_ui):
                     # 确保请求成功
                     if response.status_code == 200:
                         # Parse the HTML content with BeautifulSoup
-                        soup = BeautifulSoup(response.text, 'html.parser')
+                        response.encoding = 'utf-8'
+                        soup = BeautifulSoup(response.text, 'html.parser',from_encoding='utf-8')
                         # Find all <a> tags
                         a_tags = soup.find_all('a')   
                         img_tags = soup.find_all('img')          
@@ -348,7 +350,7 @@ class Application(Application_ui):
                         urls.extend(full_urls)
                         imgs.extend(full_imgurls)
                         if len(full_urls)<1:
-                            break
+                            continue
                     else:
                         print(f"请求失败，状态码：{response.status_code}")
                         time.sleep(2)
@@ -356,6 +358,12 @@ class Application(Application_ui):
                 except Exception as e:
                     print(e)
                     break
+                finally:
+                    pass
+                    # if len(urls)==startlen:
+                    #     i=i+40    
+                    # else:
+                    #     i=starti+len(urls)-startlen
                 
             urlFile = os.path.join(os.getcwd(), 'database',"url.txt")
             imgFile = os.path.join(os.getcwd(), 'database',"img.txt")
@@ -417,7 +425,7 @@ class Application(Application_ui):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
         }
         
-        data_file_path = os.path.join(path, 'data.txt')
+        data_file_path = os.path.join(path, 'data.html')
         decodedata_file_path = os.path.join(path, 'data.json')
         if  os.path.exists(data_file_path):
             # self.loginfo(data_file_path+" exists ignore")
@@ -426,11 +434,12 @@ class Application(Application_ui):
             return
         response = requests.get(url, headers=headers)
         # 确保请求成功
-        if "basudgan8 SAMPLE TEXT sd78n" in response.text:
-            self.datas['readedCount']+=1
-            self.loginfo(self.datas['readedCount'])
-            return
+        # if "basudgan8 SAMPLE TEXT sd78n" in response.text:
+        #     self.datas['readedCount']+=1
+        #     self.loginfo(self.datas['readedCount'])
+        #     return
         if response.status_code == 200:
+            response.encoding = 'utf-8'
             loudspeaker=self.decodeDataByHtml(response.text) 
             with open(data_file_path, 'w', encoding='utf-8') as file:
                 file.write(response.text)   
@@ -447,7 +456,7 @@ class Application(Application_ui):
     
     def downloadPdfData(self,html,path):
         # 使用BeautifulSoup解析HTML
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, 'html.parser',from_encoding='utf-8')
 
         # 找到class为'datasheet'的div
         datasheet_div = soup.find('div', class_='datasheet')
@@ -494,7 +503,7 @@ class Application(Application_ui):
     def downloadImgData(self,html,path):
         base_url = "https://loudspeakerdatabase.com"
         # 使用 BeautifulSoup 解析 HTML
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, 'html.parser',from_encoding='utf-8')
         # 寻找所有的图片链接
         img_tags = soup.find_all('img')
         
@@ -539,10 +548,10 @@ class Application(Application_ui):
         base_path = os.path.join(os.getcwd(), 'database')
         # 使用os.walk()遍历start_dir下的所有文件夹及其子文件夹
         for dirpath, dirnames, filenames in os.walk(base_path):
-            # 检查当前遍历的文件夹内是否存在文件名为'data.txt'的文件
-            if 'data.txt' in filenames:
+            # 检查当前遍历的文件夹内是否存在文件名为'data.html'的文件
+            if 'data.html' in filenames:
                 # 构建完整的文件路径并添加到files数组中
-                files.append(os.path.join(dirpath, 'data.txt'))
+                files.append(os.path.join(dirpath, 'data.html'))
         self.loginfo("All data:"+str(len(files)))
         for datafile in files:
             # print(datafile)
@@ -571,7 +580,7 @@ class Application(Application_ui):
     def decodeDataByHtml(self,html):
         # print(html)
         loudspeaker={}
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, 'html.parser',from_encoding='utf-8')
         # Find the div with class 'title'
         title_div = soup.find('div', class_='title')
         # Check if the div is found
@@ -644,7 +653,7 @@ class Application(Application_ui):
 
 
 
- # 将JSON数据转换为DataFrame需要的格式
+# 将JSON数据转换为DataFrame需要的格式
 # 这个函数会递归地处理嵌套字典，并将它们平铺开
 def flatten(data, prefix=''):
     items = []
